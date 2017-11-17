@@ -28,13 +28,68 @@ describe Bosh::AwsCloud::Cloud do
       expect(Bosh::AwsCloud::ResourceWait).to receive(:for_snapshot).with(snapshot: snapshot, state: 'completed')
 
       expect(Bosh::AwsCloud::TagManager).to receive(:tags).with(snapshot,
-        { 'agent_id' => 'agent', 'instance_id' => 'instance', 'director_name' => 'Test Director',
-          'director_uuid' => '6d06b0cc-2c08-43c5-95be-f1b2dd247e18', 'device' => '/dev/sdf', 'Name' => 'deployment/job/0/sdf'
+        {
+          'agent_id' => 'agent',
+          'instance_id' => 'instance',
+          'director_uuid' => '6d06b0cc-2c08-43c5-95be-f1b2dd247e18',
+          'deployment'=> 'deployment',
+          'device' => '/dev/sdf',
+          'director' => 'Test Director',
+          'instance_index'=> '0',
+          'instance_name'=> 'job/instance',
+          'Name' => 'deployment/job/0/sdf'
         }
       )
 
       cloud.snapshot_disk('vol-xxxxxxxx', metadata)
     end
+
+
+    context 'when there are user-defined tags' do
+      let(:metadata) {
+        {
+          'agent_id' => 'agent',
+          'instance_id' => 'instance',
+          'director_uuid' => '6d06b0cc-2c08-43c5-95be-f1b2dd247e18',
+          'deployment' => 'deployment',
+          'director_name' => 'Test Director',
+          'index' => 0,
+          'job' => 'job',
+          'tag1' => 'value1',
+          'tag2' => 'value2'
+        }
+      }
+
+      it 'they get added to the snapshot metadata' do
+        cloud = mock_cloud do |ec2|
+          allow(ec2).to receive(:volume).with('vol-xxxxxxxx').and_return(volume)
+        end
+
+        allow(volume).to receive(:attachments).and_return([attachment])
+        allow(volume).to receive(:create_snapshot).with('deployment/job/0/sdf').and_return(snapshot)
+        allow(Bosh::AwsCloud::ResourceWait).to receive(:for_snapshot).with(snapshot: snapshot, state: 'completed')
+        allow(Bosh::AwsCloud::TagManager).to receive(:tags)
+
+        cloud.snapshot_disk('vol-xxxxxxxx', metadata)
+
+        expect(Bosh::AwsCloud::TagManager).to have_received(:tags).with(snapshot,
+          {
+            'agent_id' => 'agent',
+            'instance_id' => 'instance',
+            'director_uuid' => '6d06b0cc-2c08-43c5-95be-f1b2dd247e18',
+            'deployment'=> 'deployment',
+            'device' => '/dev/sdf',
+            'director' => 'Test Director',
+            'instance_index'=> '0',
+            'instance_name'=> 'job/instance',
+            'Name' => 'deployment/job/0/sdf',
+            'tag1' => 'value1',
+            'tag2' => 'value2'
+          }
+        )
+      end
+    end
+
 
     it 'handles string keys in metadata' do
       cloud = mock_cloud do |ec2|
@@ -58,8 +113,16 @@ describe Bosh::AwsCloud::Cloud do
 
 
       expect(Bosh::AwsCloud::TagManager).to receive(:tags).with(snapshot,
-        { 'agent_id' => 'agent', 'instance_id' => 'instance', 'director_name' => 'Test Director',
-          'director_uuid' => '6d06b0cc-2c08-43c5-95be-f1b2dd247e18', 'device' => '/dev/sdf', 'Name' => 'deployment/job/0/sdf'
+        {
+          'agent_id' => 'agent',
+          'instance_id' => 'instance',
+          'director_uuid' => '6d06b0cc-2c08-43c5-95be-f1b2dd247e18',
+          'deployment'=> 'deployment',
+          'device' => '/dev/sdf',
+          'director' => 'Test Director',
+          'instance_index'=> '0',
+          'instance_name'=> 'job/instance',
+          'Name' => 'deployment/job/0/sdf'
         }
       )
 
@@ -79,8 +142,16 @@ describe Bosh::AwsCloud::Cloud do
       )
 
       expect(Bosh::AwsCloud::TagManager).to receive(:tags).with(snapshot,
-        { 'agent_id' => 'agent', 'instance_id' => 'instance', 'director_name' => 'Test Director',
-          'director_uuid' => '6d06b0cc-2c08-43c5-95be-f1b2dd247e18', 'Name' => 'deployment/job/0'}
+        {
+          'agent_id' => 'agent',
+          'instance_id' => 'instance',
+          'director_uuid' => '6d06b0cc-2c08-43c5-95be-f1b2dd247e18',
+          'deployment'=> 'deployment',
+          'director' => 'Test Director',
+          'instance_index'=> '0',
+          'instance_name'=> 'job/instance',
+          'Name' => 'deployment/job/0'
+        }
       )
 
       cloud.snapshot_disk('vol-xxxxxxxx', metadata)
